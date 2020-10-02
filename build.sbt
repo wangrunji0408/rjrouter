@@ -50,6 +50,9 @@ val defaultVersions = Seq(
 libraryDependencies ++= defaultVersions.map { case (dep, ver) =>
   "edu.berkeley.cs" %% dep % sys.props.getOrElse(dep + "Version", ver) }
 
+libraryDependencies += "org.slf4j" % "slf4j-nop" % "1.7.25"
+libraryDependencies += "org.pcap4j" % "pcap4j-core" % "1.8.2"
+
 scalacOptions ++= scalacOptionsVersion(scalaVersion.value)
 
 javacOptions ++= javacOptionsVersion(scalaVersion.value)
