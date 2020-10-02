@@ -3,7 +3,6 @@ package router
 import chisel3._
 import chisel3.tester._
 import org.scalatest.FreeSpec
-import chisel3.experimental.BundleLiterals._
 import chisel3.util.Decoupled
 
 class AXIStreamTester extends FreeSpec with ChiselScalatestTester {

@@ -33,15 +33,15 @@ object AXIStreamData {
     packet
       .grouped(width / 8)
       .zipWithIndex
-      .map(pair => {
-        val (data, i) = pair
-        (new AXIStreamData(width)).Lit(
-          _.data -> BigInt(data).U(width.W),
-          _.keep -> ((1 << data.length) - 1).U,
-          _.last -> ((i + 1) * width / 8 >= packet.length).B,
-          _.id -> id.U
-        )
-      })
+      .map {
+        case (data, i) =>
+          (new AXIStreamData(width)).Lit(
+            _.data -> BigInt(Array(0.toByte) ++ data.reverse).U(width.W),
+            _.keep -> ((BigInt(1) << data.length) - 1).U,
+            _.last -> ((i + 1) * width / 8 >= packet.length).B,
+            _.id -> id.U
+          )
+      }
       .toArray
   }
 
