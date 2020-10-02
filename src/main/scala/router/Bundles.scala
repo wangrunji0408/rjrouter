@@ -22,6 +22,10 @@ class AXIStreamData(val w: Int) extends Bundle {
       data.litValue().toByteArray
     }
   }
+
+  def ethSrc(): UInt = data(8 * 6 - 1, 0)
+  def ethDst(): UInt = data(8 * 12 - 1, 8 * 6)
+  def ethType(): UInt = data(8 * 14 - 1, 8 * 12)
 }
 
 object AXIStreamData {
@@ -52,4 +56,9 @@ object AXIStreamData {
     val data = datas.flatMap(data => data.litToBytes())
     (id, data)
   }
+}
+
+class PipelineBundle extends Bundle {
+  val in = Flipped(Decoupled(new AXIStreamData(8 * 48)))
+  val out = Decoupled(new AXIStreamData(8 * 48))
 }

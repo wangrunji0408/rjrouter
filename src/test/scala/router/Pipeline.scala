@@ -13,10 +13,7 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
 
   "Pipeline should have correct input and output" in {
     test(new Module {
-      val io = IO(new Bundle {
-        val in = Flipped(Decoupled(new AXIStreamData(8 * 48)))
-        val out = Decoupled(new AXIStreamData(8 * 48))
-      })
+      val io = IO(new PipelineBundle())
       io.out <> io.in
     }) { dut =>
       dut.io.in.initSource()
@@ -26,14 +23,14 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
 
       val input =
         PipelineTester
-          .loadPackets("src/test/resources/in_frames.pcap")
+          .loadPackets("src/test/resources/in.pcap")
           .flatMap {
             case (id, data) =>
               AXIStreamData.fromPacket(id, data, 8 * 48)
           }
       val output =
         PipelineTester
-          .loadPackets("src/test/resources/out_frames.pcap")
+          .loadPackets("src/test/resources/out.pcap")
           .flatMap {
             case (id, data) =>
               AXIStreamData.fromPacket(id, data, 8 * 48)
