@@ -101,7 +101,8 @@ class Ipv4Header extends Bundle {
   val payload = Bits((14 * 8).W)
 
   def calcChecksum() =
-    asTypeOf(Vec(10, UInt(16.W)))
+    asTypeOf(Vec(17, UInt(16.W)))
+      .slice(7, 17)
       .fold(0.U(32.W))((a, b) => a + b)
       .asTypeOf(Vec(2, UInt(16.W)))
       .reduce((a, b) => a + b)
