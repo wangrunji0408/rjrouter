@@ -4,88 +4,114 @@ import chisel3._
 import chisel3.util._
 import chisel3.experimental.BundleLiterals._
 
-// The input and output of pipeline.
-class AXIStreamData(val w: Int = 48 * 8) extends Bundle {
-  private val wb = w / 8
+class RouterConfig(val nIfaces: Int = 4) extends Bundle {
+  val mac = Vec(nIfaces, new MacAddr)
+  val ipv4 = Vec(nIfaces, new Ipv4Addr)
+}
 
-  // transmited payload. only valid when both `valid` and `ready` is true.
-  val data = Bits(w.W)
-  // valid for each bytes in the last cycle. only valid when `last` is true.
-  val keep = Bits(wb.W)
-  // is the last cycle?
-  val last = Bool()
-  // iface ID of the packet
-  val id = UInt(3.W)
+class WrapBits(w: Int) extends Bundle {
+  val bits = Bits(w.W)
+  def ===(that: EthType) = bits === that.bits
+  def =/=(that: EthType) = bits =/= that.bits
+}
 
-  def litToBytes(): Seq[Byte] = {
-    var bytes = data.litValue.toByteArray.toSeq
-    bytes = if (bytes.length > wb) {
-      bytes.slice(bytes.length - wb, bytes.length)
-    } else if (bytes.length < wb) {
-      Seq.fill(wb - bytes.length) { 0.toByte } ++ bytes
-    } else {
-      bytes
-    }
-    if (last.litToBoolean) {
-      bytes.slice(0, keep.litValue().bitCount)
-    } else {
-      bytes
-    }
+class MacAddr extends WrapBits(48) {
+  override def toPrintable: Printable = {
+    asTypeOf(Vec(6, UInt(8.W))).reverse
+      .map(b => p"${Hexadecimal(b)}")
+      .reduce((a, b) => a + ":" + b)
   }
 }
 
-object AXIStreamData {
-  // Convert packet to AXIStream.
-  def fromPacket(
-      id: Int,
-      packet: Array[Byte],
-      width: Int
-  ): Seq[AXIStreamData] = {
-    val wb = width / 8
-    packet
-      .grouped(wb)
-      .zipWithIndex
-      .map {
-        case (data, i) =>
-          (new AXIStreamData(width)).Lit(
-            _.data -> BigInt(
-              Array(0.toByte) ++ data ++ Array.fill(wb - data.length) {
-                0.toByte
-              }
-            ).U(width.W),
-            _.keep -> (((BigInt(
-              1
-            ) << data.length) - 1) << (wb - data.length)).U,
-            _.last -> ((i + 1) * wb >= packet.length).B,
-            _.id -> id.U
-          )
-      }
-      .toSeq
-  }
+object MacAddr {
+  def apply(s: String) =
+    (new MacAddr).Lit(_.bits -> ("h" + s.replace(":", "")).U)
+  val BROADCAST = MacAddr("ff:ff:ff:ff:ff:ff")
+}
 
-  // Convert AXIStream to packet.
-  def toPacket(
-      datas: Array[AXIStreamData]
-  ): (Int, Array[Byte]) = {
-    val id = datas.head.id.litValue().toInt
-    val data = datas.flatMap(data => data.litToBytes())
-    (id, data)
+class Ipv4Addr extends WrapBits(32) {
+  override def toPrintable: Printable = {
+    asTypeOf(Vec(4, UInt(8.W))).reverse
+      .map(b => p"$b")
+      .reduce((a, b) => a + "." + b)
   }
 }
 
-class PipelineBundle extends Bundle {
-  val in = Flipped(Decoupled(new AXIStreamData(48 * 8)))
-  val out = Decoupled(new AXIStreamData(48 * 8))
+object Ipv4Addr {
+  def apply(s: String) =
+    (new Ipv4Addr).Lit(
+      _.bits -> ("h" + s.split(",").flatMap(d => f"${d.toInt}%02x")).U
+    )
+  val LOCALHOST = Ipv4Addr("127.0.0.1")
 }
 
-class PipelineModule extends Module {
-  val io = IO(new PipelineBundle())
+class EthType extends WrapBits(16) {}
+
+object EthType {
+  private def apply(s: Short) = (new EthType).Lit(_.bits -> s.U)
+  val ARP = EthType(0x0806)
+  val IPV4 = EthType(0x0800)
 }
 
-// Packet defination
 class EtherHeader extends Bundle {
-  val ethDst = Bits((6 * 8).W)
-  val ethSrc = Bits((6 * 8).W)
-  val ethType = Bits((2 * 8).W)
+  val ethDst = new MacAddr
+  val ethSrc = new MacAddr
+  val ethType = new EthType
   val payload = Bits((34 * 8).W)
+}
+
+class ArpHeader extends Bundle {
+  val hardwareType = UInt(16.W)
+  val protocolType = new EthType
+  val hardwareSize = UInt(8.W)
+  val protocolSize = UInt(8.W)
+  val opcode = UInt(16.W)
+  val srcMac = new MacAddr
+  val srcIpv4 = new Ipv4Addr
+  val dstMac = new MacAddr
+  val dstIpv4 = new Ipv4Addr
+  val payload = Bits((6 * 8).W)
+
+  def isValid =
+    hardwareType === 1.U &&
+      protocolType === EthType.IPV4 &&
+      hardwareSize === 6.U &&
+      protocolSize === 4.U &&
+      (opcode === 1.U || opcode === 2.U)
+}
+
+class Ipv4Header extends Bundle {
+  val version = UInt(4.W)
+  val headerLen = UInt(4.W)
+  val dscp_ecn = UInt(8.W)
+  val totalLen = UInt(16.W)
+  val id = UInt(16.W)
+
+  val flags_reserved = UInt(1.W)
+  val dontFrag = UInt(1.W)
+  val moreFrag = UInt(1.W)
+  val fragOffset = UInt(13.W)
+
+  val ttl = UInt(8.W)
+  val protocol = UInt(8.W)
+  val checksum = UInt(16.W)
+  val src = new Ipv4Addr
+  val dst = new Ipv4Addr
+
+  val payload = Bits((14 * 8).W)
+
+  def calcChecksum() =
+    asTypeOf(Vec(10, UInt(16.W)))
+      .fold(0.U(32.W))((a, b) => a + b)
+      .asTypeOf(Vec(2, UInt(16.W)))
+      .reduce((a, b) => a + b)
+      .tail(16)
+}
+
+class UdpHeader extends Bundle {
+  val srcPort = UInt(16.W)
+  val dstPort = UInt(16.W)
+  val length = UInt(16.W)
+  val checksum = UInt(16.W)
+  val payload = Bits((6 * 8).W)
 }

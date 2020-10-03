@@ -23,8 +23,28 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
     }
   }
 
+  "ArpPipeline generate output" in {
+    test(new ArpPipeline()) { dut =>
+      initAndInput(dut, "src/test/resources/in.pcap")
+        .fork {
+          dumpOutput(dut, "src/test/resources/arp_out.pcap")
+        }
+        .join()
+    }
+  }
+
+  "Ipv4Pipeline generate output" in {
+    test(new Ipv4Pipeline()) { dut =>
+      initAndInput(dut, "src/test/resources/in.pcap")
+        .fork {
+          dumpOutput(dut, "src/test/resources/ipv4_out.pcap")
+        }
+        .join()
+    }
+  }
+
   "Pipeline should works" in {
-    test(new PipelineModule {
+    test(new Pipeline {
       io.out <> io.in
     }) { dut =>
       initAndInput(dut, "src/test/resources/in.pcap")
@@ -36,7 +56,7 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
     }
   }
 
-  def initAndInput(dut: PipelineModule, filePath: String): TesterThreadList = {
+  def initAndInput(dut: Pipeline, filePath: String): TesterThreadList = {
     dut.io.in.initSource().setSourceClock(dut.clock)
     dut.io.out.initSink().setSinkClock(dut.clock)
     fork {
@@ -45,7 +65,7 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
     }
   }
 
-  def dumpOutput(dut: PipelineModule, filePath: String) = {
+  def dumpOutput(dut: Pipeline, filePath: String) = {
     val buf = ArrayBuffer[Byte]()
     val packets = ArrayBuffer[(Int, Array[Byte])]()
     var end = false
