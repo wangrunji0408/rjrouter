@@ -1,18 +1,23 @@
 package router
 
 import chisel3._
-import chisel3.util.Decoupled
+import chisel3.util._
 
 // Reverse src and dst MAC then send to the origin iface.
-class LoopbackPipeline extends Module {
-  val io = IO(new PipelineBundle())
+class LoopbackPipeline extends PipelineModule {
 
-  val isFirstBeat = RegNext(io.in.bits.last, init = true.B)
+  val isFirstBeat = RegInit(true.B)
+  when(io.in.valid) {
+    isFirstBeat := io.in.bits.last
+  }
 
   io.out <> io.in
-  when (isFirstBeat) {
+  when(isFirstBeat) {
+    val ethIn = io.in.bits.data.asTypeOf(new EtherHeader())
     // swap src and dst MAC
-    io.out.bits.ethSrc := io.in.bits.ethDst
-    io.out.bits.ethDst := io.in.bits.ethSrc
+    val ethOut = WireDefault(ethIn)
+    ethOut.ethSrc := ethIn.ethDst
+    ethOut.ethDst := ethIn.ethSrc
+    io.out.bits.data := ethOut.asUInt
   }
 }

@@ -9,71 +9,84 @@ import chisel3.tester._
 import org.scalatest.FreeSpec
 import chisel3.util.Decoupled
 import scala.collection.mutable.ArrayBuffer
+import chiseltest.internal.TesterThreadList
 
 class PipelineTester extends FreeSpec with ChiselScalatestTester {
 
-  "Pipeline should have correct input and output" in {
-    test(new Module {
-      val io = IO(new PipelineBundle())
-      io.out <> io.in
-    }) { dut =>
-      dut.io.in.initSource().setSourceClock(dut.clock)
-      dut.io.out.initSink().setSinkClock(dut.clock)
-
-      val input =
-        PipelineTester
-          .loadPackets("src/test/resources/in.pcap")
-          .flatMap {
-            case (id, data) =>
-              AXIStreamData.fromPacket(id, data, 8 * 48)
-          }
-      val output =
-        PipelineTester
-          .loadPackets("src/test/resources/stdout.pcap")
-          .flatMap {
-            case (id, data) =>
-              AXIStreamData.fromPacket(id, data, 8 * 48)
-          }
-
-      var end = false
-      fork {
-        // poke input
-        dut.io.in.enqueueSeq(input)
-      }.fork {
-        // expect output
-        dut.io.out.expectDequeueSeq(output)
-        end = true
-      }.fork {
-        // dump output to file
-        val buf = ArrayBuffer[Byte]()
-        val packets = ArrayBuffer[(Int, Array[Byte])]()
-        while (!end) {
-          fork
-            .withRegion(Monitor) {
-              // wait for valid
-              while (dut.io.out.valid.peek().litToBoolean == false && !end) {
-                dut.clock.step(1)
-              }
-              val bits = dut.io.out.bits.peek()
-              val id = bits.id.litValue.toInt
-              val last = bits.last.litToBoolean
-              val data = bits.litToBytes.reverse
-              buf ++= data
-              if (last) {
-                // Console.println(id, buf.map { b => f"$b%02x" }.mkString(" "))
-                packets += ((id, buf.toArray[Byte]))
-                buf.clear()
-              }
-            }
-            .joinAndStep(dut.clock)
+  "Loopback generate output" in {
+    test(new LoopbackPipeline()) { dut =>
+      initAndInput(dut, "src/test/resources/in.pcap")
+        .fork {
+          dumpOutput(dut, "src/test/resources/loopback_out.pcap")
         }
-        PipelineTester.storePackets("src/test/resources/out.pcap", packets)
-      }.join()
+        .join()
     }
   }
-}
 
-object PipelineTester {
+  "Pipeline should works" in {
+    test(new PipelineModule {
+      io.out <> io.in
+    }) { dut =>
+      initAndInput(dut, "src/test/resources/in.pcap")
+        .fork {
+          val output = loadAxisFromPcap("src/test/resources/stdout.pcap")
+          dut.io.out.expectDequeueSeq(output)
+        }
+        .join()
+    }
+  }
+
+  def initAndInput(dut: PipelineModule, filePath: String): TesterThreadList = {
+    dut.io.in.initSource().setSourceClock(dut.clock)
+    dut.io.out.initSink().setSinkClock(dut.clock)
+    fork {
+      val input = loadAxisFromPcap(filePath)
+      dut.io.in.enqueueSeq(input)
+    }
+  }
+
+  def dumpOutput(dut: PipelineModule, filePath: String) = {
+    val buf = ArrayBuffer[Byte]()
+    val packets = ArrayBuffer[(Int, Array[Byte])]()
+    var end = false
+    dut.io.out.ready.poke(true.B)
+    while (!end) {
+      fork
+        .withRegion(Monitor) {
+          // wait for valid
+          var count = 0
+          val timeout = 100
+          while (
+            dut.io.out.valid.peek().litToBoolean == false && count < timeout
+          ) {
+            dut.clock.step(1)
+            count += 1
+          }
+          if (count == timeout) {
+            end = true
+          } else {
+            val bits = dut.io.out.bits.peek()
+            val id = bits.id.litValue.toInt
+            val last = bits.last.litToBoolean
+            val data = bits.litToBytes
+            buf ++= data
+            if (last) {
+              // Console.println(id, buf.map { b => f"$b%02x" }.mkString(" "))
+              packets += ((id, buf.toArray[Byte]))
+              buf.clear()
+            }
+          }
+        }
+        .joinAndStep(dut.clock)
+    }
+    storePackets(filePath, packets)
+  }
+
+  def loadAxisFromPcap(filePath: String): Seq[AXIStreamData] =
+    loadPackets(filePath).flatMap {
+      case (id, data) => AXIStreamData.fromPacket(id, data, 8 * 48)
+    }
+
   def loadPackets(filePath: String): Seq[(Int, Array[Byte])] = {
     val handle = Pcaps.openOffline(filePath)
     val packets = ArrayBuffer[(Int, Array[Byte])]()
