@@ -15,17 +15,17 @@ class AXIStreamData(val w: Int) extends Bundle {
   // iface ID of the packet
   val id = UInt(3.W)
 
-  private def litToBytes(): Array[Byte] = {
+  def litToBytes(): Array[Byte] = {
     if (last.litToBoolean) {
-      data.litValue().toByteArray.slice(0, PopCount(keep).litValue().toInt)
+      data.litValue().toByteArray.slice(0, keep.litValue().bitCount)
     } else {
       data.litValue().toByteArray
     }
   }
 
-  def ethSrc(): UInt = data(8 * 6 - 1, 0)
-  def ethDst(): UInt = data(8 * 12 - 1, 8 * 6)
-  def ethType(): UInt = data(8 * 14 - 1, 8 * 12)
+  def ethSrc(): UInt = data(6 * 8 - 1, 0)
+  def ethDst(): UInt = data(12 * 8 - 1, 6 * 8)
+  def ethType(): UInt = data(14 * 8 - 1, 12 * 8)
 }
 
 object AXIStreamData {
@@ -59,6 +59,6 @@ object AXIStreamData {
 }
 
 class PipelineBundle extends Bundle {
-  val in = Flipped(Decoupled(new AXIStreamData(8 * 48)))
-  val out = Decoupled(new AXIStreamData(8 * 48))
+  val in = Flipped(Decoupled(new AXIStreamData(48 * 8)))
+  val out = Decoupled(new AXIStreamData(48 * 8))
 }

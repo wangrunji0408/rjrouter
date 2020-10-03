@@ -10,18 +10,16 @@ class AXIStreamTester extends FreeSpec with ChiselScalatestTester {
   "AXIStream should have correct input and output" in {
     test(new Module {
       val io = IO(new Bundle {
-        val in = Flipped(Decoupled(new AXIStreamData(8 * 4)))
-        val out = Decoupled(new AXIStreamData(8 * 4))
+        val in = Flipped(Decoupled(new AXIStreamData(4 * 8)))
+        val out = Decoupled(new AXIStreamData(4 * 8))
       })
       io.out <> io.in
     }) { dut =>
-      dut.io.in.initSource()
-      dut.io.in.setSourceClock(dut.clock)
-      dut.io.out.initSink()
-      dut.io.out.setSinkClock(dut.clock)
+      dut.io.in.initSource().setSourceClock(dut.clock)
+      dut.io.out.initSink().setSinkClock(dut.clock)
 
       val data = "0123456789abcd".getBytes()
-      val datas = AXIStreamData.fromPacket(1, data, 8 * 4)
+      val datas = AXIStreamData.fromPacket(1, data, 4 * 8)
 
       fork {
         // push inputs into the calculator, stall for 11 cycles one third of the way
