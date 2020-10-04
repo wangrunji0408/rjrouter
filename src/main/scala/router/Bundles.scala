@@ -26,6 +26,8 @@ class MacAddr extends WrapBits(48) {
 object MacAddr {
   def apply(s: String) =
     (new MacAddr).Lit(_.bits -> ("h" + s.replace(":", "")).U)
+  def apply(bytes: Array[Byte]) =
+    (new MacAddr).Lit(_.bits -> ("h" + bytes.map(b => f"$b%02x").mkString).U)
   val BROADCAST = MacAddr("ff:ff:ff:ff:ff:ff")
 }
 
@@ -78,6 +80,11 @@ class ArpHeader extends Bundle {
       hardwareSize === 6.U &&
       protocolSize === 4.U &&
       (opcode === 1.U || opcode === 2.U)
+}
+
+object ArpOpcode {
+  val Request = 1.U
+  val Response = 2.U
 }
 
 class Ipv4Header extends Bundle {

@@ -38,6 +38,9 @@ class AXIStreamData(val w: Int = 48 * 8) extends Bundle {
 }
 
 object AXIStreamData {
+  // Generate keep literal
+  def keep(n: Int, wb: Int) = (((BigInt(1) << n) - 1) << (wb - n)).U(wb.W)
+
   // Convert packet to AXIStream.
   def fromPacket(
       id: Int,
@@ -56,9 +59,7 @@ object AXIStreamData {
                 0.toByte
               }
             ).U(width.W),
-            _.keep -> (((BigInt(
-              1
-            ) << data.length) - 1) << (wb - data.length)).U,
+            _.keep -> keep(data.length, wb),
             _.last -> ((i + 1) * wb >= packet.length).B,
             _.id -> id.U
           )

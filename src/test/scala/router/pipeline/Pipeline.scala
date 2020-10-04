@@ -9,10 +9,9 @@ import chisel3.tester._
 import org.scalatest.FreeSpec
 import chisel3.util.Decoupled
 import scala.collection.mutable.ArrayBuffer
-import chiseltest.internal.TesterThreadList
+import router._
 
-class PipelineTester extends FreeSpec with ChiselScalatestTester {
-
+class LoopbackTester extends PipelineTester {
   "Loopback generate output" in {
     test(new LoopbackPipeline()) { dut =>
       initAndInput(dut, "src/test/resources/in.pcap")
@@ -22,17 +21,21 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
         .join()
     }
   }
+}
 
-  "ArpPipeline generate output" in {
-    test(new ArpPipeline()) { dut =>
+class ArpRequestTester extends PipelineTester {
+  "ArpRequest generate output" in {
+    test(new ArpRequest()) { dut =>
       initAndInput(dut, "src/test/resources/in.pcap")
         .fork {
-          dumpOutput(dut, "src/test/resources/arp_out.pcap")
+          dumpOutput(dut, "src/test/resources/arp_request_out.pcap")
         }
         .join()
     }
   }
+}
 
+class Ipv4PipelineTester extends PipelineTester {
   "Ipv4Pipeline generate output" in {
     test(new Ipv4Pipeline()) { dut =>
       initAndInput(dut, "src/test/resources/in.pcap")
@@ -42,8 +45,10 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
         .join()
     }
   }
+}
 
-  "Pipeline should works" in {
+class NopTester extends PipelineTester {
+  "Nop should works" in {
     test(new Pipeline {
       io.out <> io.in
     }) { dut =>
@@ -55,10 +60,17 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
         .join()
     }
   }
+}
 
-  def initAndInput(dut: Pipeline, filePath: String): TesterThreadList = {
+class PipelineTester extends FreeSpec with ChiselScalatestTester {
+
+  def initAndInput(dut: Pipeline, filePath: String) = {
     dut.io.in.initSource().setSourceClock(dut.clock)
     dut.io.out.initSink().setSinkClock(dut.clock)
+    for (i <- 0 until 4) {
+      dut.io.config.ipv4(i).poke(Ipv4Addr(s"10.0.$i.1"))
+      dut.io.config.mac(i).poke(MacAddr(s"RJGG_$i".map(_.toByte).toArray))
+    }
     fork {
       val input = loadAxisFromPcap(filePath)
       dut.io.in.enqueueSeq(input)
