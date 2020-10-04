@@ -1,8 +1,9 @@
-package router
+package router.table
 
 import chisel3._
 import chisel3.tester._
 import org.scalatest._
+import router._
 
 class ArpCacheTester extends FlatSpec with ChiselScalatestTester {
   behavior of "ArpCache"

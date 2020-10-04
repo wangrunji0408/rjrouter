@@ -1,7 +1,8 @@
-package router
+package router.pipeline
 
 import chisel3._
 import chisel3.util._
+import router._
 
 class Ipv4Pipeline extends Pipeline {
   io.out <> io.in

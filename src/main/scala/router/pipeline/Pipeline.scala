@@ -1,10 +1,11 @@
 // Definations of pipeline
 
-package router
+package router.pipeline
 
 import chisel3._
 import chisel3.util.Decoupled
 import chisel3.experimental.BundleLiterals._
+import router._
 
 // The input and output of pipeline.
 class AXIStreamData(val w: Int = 48 * 8) extends Bundle {

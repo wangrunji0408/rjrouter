@@ -1,7 +1,8 @@
-package router
+package router.table
 
 import chisel3._
 import chisel3.util._
+import router._
 
 class ArpQuery extends Bundle {
   val ipv4 = Output(new Ipv4Addr)
