@@ -16,7 +16,7 @@ class ArpCacheTester extends FlatSpec with ChiselScalatestTester {
       def insert(key: Ipv4Addr, value: MacAddr) = {
         modify.op.poke(ArpOp.Insert)
         modify.ipv4.poke(key)
-        modify.arp.poke(value)
+        modify.mac.poke(value)
         dut.clock.step(1)
       }
 
@@ -33,9 +33,9 @@ class ArpCacheTester extends FlatSpec with ChiselScalatestTester {
 
       def check(key: Ipv4Addr, value: Option[MacAddr]) = {
         query.ipv4.poke(key)
-        query.arp.valid.expect(value.isDefined.B)
+        query.mac.valid.expect(value.isDefined.B)
         if (value.isDefined) {
-          query.arp.bits.expect(value.get)
+          query.mac.bits.expect(value.get)
         }
       }
 

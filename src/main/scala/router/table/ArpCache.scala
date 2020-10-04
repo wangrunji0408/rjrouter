@@ -6,20 +6,27 @@ import router._
 
 class ArpQuery extends Bundle {
   val ipv4 = Output(new Ipv4Addr)
-  val arp = Input(Valid(new MacAddr))
+  val mac = Input(Valid(new MacAddr))
 }
 
 class ArpModify extends Bundle {
-  val op = Output(UInt(2.W))
+  val op = Output(UInt(3.W))
   val ipv4 = Output(new Ipv4Addr)
-  val arp = Output(new MacAddr)
+  val mac = Output(new MacAddr)
+
+  def setNone() = {
+    op := ArpOp.None
+    ipv4 := DontCare
+    mac := DontCare
+  }
 }
 
 object ArpOp {
-  val None = 0.U(2.W)
-  val Insert = 1.U(2.W)
-  val Remove = 2.U(2.W)
-  val Clear = 3.U(2.W)
+  val None = 0.U
+  val Insert = 1.U
+  val Update = 2.U
+  val Remove = 3.U
+  val Clear = 4.U
 }
 
 // ARP Cache. Direct mapping.
@@ -32,7 +39,7 @@ class ArpCache(val SIZE_LOG2: Int = 4) extends Module {
 
   class ArpEntry extends Bundle {
     val ipv4 = new Ipv4Addr
-    val arp = new MacAddr
+    val mac = new MacAddr
   }
   val table = Mem(SIZE, Valid(new ArpEntry))
 
@@ -51,17 +58,20 @@ class ArpCache(val SIZE_LOG2: Int = 4) extends Module {
   // query
   val key = io.query.ipv4
   val entry = table(hashIndex(key))
-  io.query.arp.valid := entry.valid && entry.bits.ipv4 === key
-  io.query.arp.bits := entry.bits.arp
+  io.query.mac.valid := entry.valid && entry.bits.ipv4 === key
+  io.query.mac.bits := entry.bits.mac
 
   val idx = hashIndex(io.modify.ipv4)
-  // insert
   when(io.modify.op === ArpOp.Insert) {
     table(idx).valid := true.B
     table(idx).bits.ipv4 := io.modify.ipv4
-    table(idx).bits.arp := io.modify.arp
+    table(idx).bits.mac := io.modify.mac
   }
-  // remove
+  when(io.modify.op === ArpOp.Update) {
+    when(table(idx).valid && table(idx).bits.ipv4 === io.modify.ipv4) {
+      table(idx).bits.mac := io.modify.mac
+    }
+  }
   when(io.modify.op === ArpOp.Remove) {
     when(table(idx).bits.ipv4 === io.modify.ipv4) {
       table(idx).valid := false.B

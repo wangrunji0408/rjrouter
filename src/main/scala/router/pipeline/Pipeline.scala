@@ -6,6 +6,7 @@ import chisel3._
 import chisel3.util.Decoupled
 import chisel3.experimental.BundleLiterals._
 import router._
+import router.table.ArpModify
 
 // The input and output of pipeline.
 class AXIStreamData(val w: Int = 48 * 8) extends Bundle {
@@ -81,6 +82,7 @@ class PipelineBundle extends Bundle {
   val in = Flipped(Decoupled(new AXIStreamData(48 * 8)))
   val out = Decoupled(new AXIStreamData(48 * 8))
   val config = Input(new RouterConfig())
+  val arpModify = new ArpModify
 }
 
 class Pipeline extends Module {

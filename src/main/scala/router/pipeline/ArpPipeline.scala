@@ -3,24 +3,30 @@ package router.pipeline
 import chisel3._
 import chisel3.util._
 import router._
+import router.table._
 
-// Process ARP request
-class ArpRequest extends Pipeline {
+// Process ARP packet
+class ArpPipeline extends Pipeline {
   // state
   val sIdle :: sDrop :: Nil = Enum(2)
   val state = RegInit(sIdle)
 
   io.out <> io.in
+  io.arpModify.setNone()
   switch(state) {
     is(sIdle) {
-      when(isFirstBeat) {
+      when(io.in.valid && isFirstBeat) {
         val ethIn = io.in.bits.data.asTypeOf(new EtherHeader())
         val arpIn = ethIn.payload.asTypeOf(new ArpHeader())
-        when(
-          ethIn.ethType === EthType.ARP && arpIn.opcode === ArpOpcode.Request
-        ) {
+        when(ethIn.ethType === EthType.ARP && arpIn.isValid) {
           val id = io.in.bits.id
-          when(arpIn.dstIpv4 === io.config.ipv4(id)) {
+          val targetIsMe = arpIn.dstIpv4 === io.config.ipv4(id)
+          // update ARP cache
+          io.arpModify.op := Mux(targetIsMe, ArpOp.Insert, ArpOp.Update)
+          io.arpModify.ipv4 := arpIn.srcIpv4
+          io.arpModify.mac := arpIn.srcMac
+          
+          when(targetIsMe && arpIn.opcode === ArpOpcode.Request) {
             val ethOut = WireInit(ethIn)
             val arpOut = WireInit(arpIn)
             // construct reply

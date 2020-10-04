@@ -23,12 +23,12 @@ class LoopbackTester extends PipelineTester {
   }
 }
 
-class ArpRequestTester extends PipelineTester {
-  "ArpRequest generate output" in {
-    test(new ArpRequest()) { dut =>
+class ArpPipelineTester extends PipelineTester {
+  "ArpPipeline generate output" in {
+    test(new ArpPipeline()) { dut =>
       initAndInput(dut, "src/test/resources/in.pcap")
         .fork {
-          dumpOutput(dut, "src/test/resources/arp_request_out.pcap")
+          dumpOutput(dut, "src/test/resources/arp_out.pcap")
         }
         .join()
     }
