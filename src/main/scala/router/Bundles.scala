@@ -11,8 +11,8 @@ class RouterConfig(val nIfaces: Int = 4) extends Bundle {
 
 class WrapBits(w: Int) extends Bundle {
   val bits = Bits(w.W)
-  def ===(that: EthType) = bits === that.bits
-  def =/=(that: EthType) = bits =/= that.bits
+  def ===(that: WrapBits) = bits === that.bits
+  def =/=(that: WrapBits) = bits =/= that.bits
 }
 
 class MacAddr extends WrapBits(48) {
@@ -40,7 +40,7 @@ class Ipv4Addr extends WrapBits(32) {
 object Ipv4Addr {
   def apply(s: String) =
     (new Ipv4Addr).Lit(
-      _.bits -> ("h" + s.split(",").flatMap(d => f"${d.toInt}%02x")).U
+      _.bits -> ("h" + s.split("\\.").map(d => f"${d.toInt}%02x").mkString).U
     )
   val LOCALHOST = Ipv4Addr("127.0.0.1")
 }
