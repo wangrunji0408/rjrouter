@@ -85,7 +85,7 @@ class Pipeline extends Module {
   val io = IO(new PipelineBundle())
 
   val isFirstBeat = RegInit(true.B)
-  when(io.in.valid) {
+  when(io.in.valid && io.in.ready) {
     isFirstBeat := io.in.bits.last
   }
 }

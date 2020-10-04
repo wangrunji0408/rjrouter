@@ -76,7 +76,7 @@ write_frame(pin, 0, Ether(src=MAC_TESTER0, dst=MAC_BROADCAST) /
             IP(src=IP_TESTER0, dst=IP_TEST_DST) /
             UDP(sport=7, dport=7) / b'hello, 00001')
 write_frame(pout, IFACE_DEFAULT_ROUTE, Ether(src=MAC_DUT3, dst=MAC_DEFAULT_ROUTE) /
-            IP(src=IP_TESTER0, dst=IP_TEST_DST) /
+            IP(src=IP_TESTER0, dst=IP_TEST_DST, ttl=63) /
             UDP(sport=7, dport=7) / b'hello, 00001')
 
 # Packet to the router itself, should not be forwarded.
