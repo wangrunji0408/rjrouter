@@ -166,4 +166,26 @@ def gen_test():
     pin.close()
     pout.close()
 
+
+def gen_arp():
+    pin = RawPcapWriter('arp_in.pcap', DLT_EN10MB)
+    pout = RawPcapWriter('arp_ans.pcap', DLT_EN10MB)
+
+    # Invalid opcode. should no output.
+    write_frame(pin, 0, Ether(src=MAC_TESTER0, dst=MAC_BROADCAST) /
+                ARP(op=0, hwsrc=MAC_TESTER0, psrc=IP_TESTER0, hwdst=MAC_BROADCAST, pdst=IP_DUT0))
+
+    # ARP request. should reply.
+    write_frame(pin, 0, Ether(src=MAC_TESTER0, dst=MAC_BROADCAST) /
+                ARP(op='who-has', hwsrc=MAC_TESTER0, psrc=IP_TESTER0, hwdst=MAC_BROADCAST, pdst=IP_DUT0) /
+                (b"\0" * 18))
+    write_frame(pout, 0, Ether(src=MAC_DUT0, dst=MAC_TESTER0) /
+                ARP(op='is-at', hwsrc=MAC_DUT0, psrc=IP_DUT0, hwdst=MAC_TESTER0, pdst=IP_TESTER0))
+
+    # ARP reply. should no output.
+    write_frame(pin, 0, Ether(src=MAC_TESTER0, dst=MAC_DUT0) /
+                ARP(op='is-at', hwsrc=MAC_TESTER0, psrc=IP_TESTER0, hwdst=MAC_DUT0, pdst=IP_DUT0))
+
+
 gen_test()
+gen_arp()

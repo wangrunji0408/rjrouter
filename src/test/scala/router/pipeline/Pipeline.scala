@@ -14,7 +14,7 @@ import router._
 class LoopbackTester extends PipelineTester {
   "Loopback generate output" in {
     test(new LoopbackPipeline()) { dut =>
-      initAndInput(dut, "src/test/resources/in.pcap")
+      initAndInput(dut, "src/test/resources/test_in.pcap")
         .fork {
           dumpOutput(dut, "src/test/resources/loopback_out.pcap")
         }
@@ -24,11 +24,15 @@ class LoopbackTester extends PipelineTester {
 }
 
 class ArpPipelineTester extends PipelineTester {
-  "ArpPipeline generate output" in {
+  "ArpPipeline should works" in {
     test(new ArpPipeline()) { dut =>
-      initAndInput(dut, "src/test/resources/in.pcap")
+      initAndInput(dut, "src/test/resources/arp_in.pcap")
+        // .fork {
+        //   dumpOutput(dut, "src/test/resources/arp_out.pcap")
+        // }
         .fork {
-          dumpOutput(dut, "src/test/resources/arp_out.pcap")
+          val output = loadAxisFromPcap("src/test/resources/arp_ans.pcap")
+          dut.io.out.expectDequeueSeq(output)
         }
         .join()
     }
@@ -38,7 +42,7 @@ class ArpPipelineTester extends PipelineTester {
 class Ipv4PipelineTester extends PipelineTester {
   "Ipv4Pipeline generate output" in {
     test(new Ipv4Pipeline()) { dut =>
-      initAndInput(dut, "src/test/resources/in.pcap")
+      initAndInput(dut, "src/test/resources/test_in.pcap")
         .fork {
           dumpOutput(dut, "src/test/resources/ipv4_out.pcap")
         }
@@ -52,9 +56,9 @@ class NopTester extends PipelineTester {
     test(new Pipeline {
       io.out <> io.in
     }) { dut =>
-      initAndInput(dut, "src/test/resources/in.pcap")
+      initAndInput(dut, "src/test/resources/test_in.pcap")
         .fork {
-          val output = loadAxisFromPcap("src/test/resources/stdout.pcap")
+          val output = loadAxisFromPcap("src/test/resources/test_in.pcap")
           dut.io.out.expectDequeueSeq(output)
         }
         .join()
@@ -143,7 +147,7 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
 
   def storePackets(filePath: String, packets: Seq[(Int, Array[Byte])]) {
     val handle =
-      Pcaps.openOffline("src/test/resources/in.pcap").dumpOpen(filePath)
+      Pcaps.openOffline("src/test/resources/test_in.pcap").dumpOpen(filePath)
     for ((id, data) <- packets) {
       val (head, tail) = data.splitAt(12)
       val buf = ByteBuffer

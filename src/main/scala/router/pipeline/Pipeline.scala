@@ -3,7 +3,7 @@
 package router.pipeline
 
 import chisel3._
-import chisel3.util.Decoupled
+import chisel3.util._
 import chisel3.experimental.BundleLiterals._
 import router._
 import router.table.ArpModify
@@ -89,7 +89,31 @@ class Pipeline extends Module {
   val io = IO(new PipelineBundle())
 
   val isFirstBeat = RegInit(true.B)
-  when(io.in.valid && io.in.ready) {
+  when(io.in.fire) {
     isFirstBeat := io.in.bits.last
   }
+
+  // drop current and rest beat?
+  private val drop = RegInit(false.B)
+  // auto reset after last beat
+  when(io.in.fire && io.in.bits.last) {
+    drop := false.B
+  }
+  // for implementor
+  def dropRest() {
+    out.valid := false.B
+    out.bits := DontCare
+    drop := !io.in.bits.last
+  }
+
+  // output for implementor
+  val out = Wire(Valid(new AXIStreamData))
+  out.valid := io.in.valid
+  out.bits := io.in.bits
+
+  // default output
+  io.in.ready := io.out.ready || drop
+  io.out.valid := RegNext(out.valid && !drop)
+  io.out.bits := RegNext(out.bits)
+  io.arpModify.setNone()
 }
