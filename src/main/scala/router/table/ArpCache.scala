@@ -7,6 +7,10 @@ import router._
 class ArpQuery extends Bundle {
   val ipv4 = Output(new Ipv4Addr)
   val mac = Input(Valid(new MacAddr))
+
+  def setNone() = {
+    ipv4 := Ipv4Addr("0.0.0.0")
+  }
 }
 
 class ArpModify extends Bundle {

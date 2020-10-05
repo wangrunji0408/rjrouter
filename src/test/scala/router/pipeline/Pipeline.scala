@@ -11,6 +11,18 @@ import chisel3.util.Decoupled
 import scala.collection.mutable.ArrayBuffer
 import router._
 
+class RouterTester extends PipelineTester {
+  "Router generate output" in {
+    test(new RouterPipeline()) { dut =>
+      initAndInput(dut, "src/test/resources/test_in.pcap")
+        .fork {
+          dumpOutput(dut, "src/test/resources/test_out.pcap")
+        }
+        .join()
+    }
+  }
+}
+
 class LoopbackTester extends PipelineTester {
   "Loopback generate output" in {
     test(new LoopbackPipeline()) { dut =>

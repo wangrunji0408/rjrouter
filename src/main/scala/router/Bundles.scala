@@ -116,6 +116,10 @@ class Ipv4Header extends Bundle {
       .tail(16)
 }
 
+object IpProtocol {
+  val UDP = 17.U
+}
+
 class UdpHeader extends Bundle {
   val srcPort = UInt(16.W)
   val dstPort = UInt(16.W)
