@@ -16,6 +16,7 @@ class Router extends Pipeline {
     m
   }
 
+  val l2filter = addPipeline(Module(new L2Filter))
   val arp = addPipeline(Module(new ArpPipeline))
   val ipv4Check = addPipeline(Module(new Ipv4Check))
   val ipv4Forward = addPipeline(Module(new Ipv4Forward))
