@@ -26,7 +26,6 @@ MAC_DUT2 = b'RJGG_2'
 MAC_DUT3 = b'RJGG_3'
 MAC_TESTER0 = b'TWD2_0'
 MAC_TESTER1 = b'TWD2_1'
-MAC_TESTER2 = b'TWD2_2'
 MAC_DEFAULT_ROUTE = b'TWD2_3'
 IFACE_DEFAULT_ROUTE = 3
 
@@ -95,12 +94,12 @@ def gen_test():
                 UDP(sport=7, dport=7) / b'hello, 00002')
 
     # Simple IP forwarding test (no MAC).
-    write_frame(pin, 1, Ether(src=MAC_TESTER2, dst=MAC_DUT1) /
+    write_frame(pin, 1, Ether(src=MAC_TESTER1, dst=MAC_DUT1) /
                 IP(src=IP_TESTER2, dst=IP_TEST_DST_NO_MAC) /
                 UDP(sport=7, dport=7) / b'hello, 00003')
 
     # Simple IP forwarding test (no route).
-    write_frame(pin, 1, Ether(src=MAC_TESTER2, dst=MAC_DUT1) /
+    write_frame(pin, 1, Ether(src=MAC_TESTER1, dst=MAC_DUT1) /
                 IP(src=IP_TESTER2, dst=IP_TEST_DST_NO_ROUTE) /
                 UDP(sport=7, dport=7) / b'hello, 00004')
 

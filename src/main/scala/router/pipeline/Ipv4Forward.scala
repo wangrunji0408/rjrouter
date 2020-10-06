@@ -15,9 +15,23 @@ class Ipv4Forward extends Pipeline {
     when(ethIn.ethType === EthType.IPV4) {
       // TODO: query forward table
 
-      // default router
-      val outIface = 3.U
-      val nextHop = Ipv4Addr("10.0.3.2")
+      // to me
+      for (iface <- io.config.iface) {
+        when(ipv4In.dst === iface.ipv4) {
+          dropRest()
+        }
+      }
+
+      // default route
+      val outIface = WireInit(3.U)
+      val nextHop = WireInit(Ipv4Addr("10.0.3.2"))
+      // direct route
+      for ((iface, i) <- io.config.iface.zipWithIndex) {
+        when((ipv4In.dst & iface.mask) === (iface.ipv4 & iface.mask)) {
+          outIface := i.U
+          nextHop := ipv4In.dst
+        }
+      }
 
       // update IPv4 header
       val ipv4Out = WireInit(ipv4In)

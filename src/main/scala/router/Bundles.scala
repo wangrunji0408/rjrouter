@@ -5,8 +5,14 @@ import chisel3.util._
 import chisel3.experimental.BundleLiterals._
 
 class RouterConfig(val nIfaces: Int = 4) extends Bundle {
-  val mac = Vec(nIfaces, new MacAddr)
-  val ipv4 = Vec(nIfaces, new Ipv4Addr)
+  val iface = Vec(
+    nIfaces,
+    new Bundle {
+      val mac = new MacAddr
+      val ipv4 = new Ipv4Addr
+      val mask = new Ipv4Addr
+    }
+  )
 }
 
 class WrapBits(w: Int) extends Bundle {
@@ -37,6 +43,7 @@ class Ipv4Addr extends WrapBits(32) {
       .map(b => p"$b")
       .reduce((a, b) => a + "." + b)
   }
+  def &(that: Ipv4Addr) = (bits & that.bits).asTypeOf(new Ipv4Addr)
 }
 
 object Ipv4Addr {
@@ -80,6 +87,13 @@ class ArpHeader extends Bundle {
       hardwareSize === 6.U &&
       protocolSize === 4.U &&
       (opcode === 1.U || opcode === 2.U)
+
+  def setTypeSize() {
+    hardwareType := 1.U
+    protocolType := EthType.IPV4
+    hardwareSize := 6.U
+    protocolSize := 4.U
+  }
 }
 
 object ArpOpcode {

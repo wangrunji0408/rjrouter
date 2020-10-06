@@ -71,9 +71,10 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
   def initAndInput(dut: Pipeline, filePath: String) = {
     dut.io.in.initSource().setSourceClock(dut.clock)
     dut.io.out.initSink().setSinkClock(dut.clock)
-    for (i <- 0 until 4) {
-      dut.io.config.ipv4(i).poke(Ipv4Addr(s"10.0.$i.1"))
-      dut.io.config.mac(i).poke(MacAddr(s"RJGG_$i".map(_.toByte).toArray))
+    for ((iface, i) <- dut.io.config.iface.zipWithIndex) {
+      iface.ipv4.poke(Ipv4Addr(s"10.0.$i.1"))
+      iface.mask.poke(Ipv4Addr("255.255.255.0"))
+      iface.mac.poke(MacAddr(s"RJGG_$i".map(_.toByte).toArray))
     }
     fork {
       val input = loadAxisFromPcap(filePath)

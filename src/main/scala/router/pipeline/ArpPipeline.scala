@@ -17,7 +17,8 @@ class ArpPipeline extends Pipeline(hasArpModify = true) {
 
       when(arpIn.isValid) {
         val id = io.in.bits.id
-        val targetIsMe = arpIn.dstIpv4 === io.config.ipv4(id)
+        val iface = io.config.iface(id)
+        val targetIsMe = arpIn.dstIpv4 === iface.ipv4
         // update ARP cache
         io.arpModify.get.op := Mux(targetIsMe, ArpOp.Insert, ArpOp.Update)
         io.arpModify.get.ipv4 := arpIn.srcIpv4
@@ -27,12 +28,12 @@ class ArpPipeline extends Pipeline(hasArpModify = true) {
           val ethOut = WireInit(ethIn)
           val arpOut = WireInit(arpIn)
           // construct reply
-          ethOut.ethSrc := io.config.mac(id)
+          ethOut.ethSrc := iface.mac
           ethOut.ethDst := ethIn.ethSrc
           arpOut.opcode := ArpOpcode.Response
-          arpOut.srcMac := io.config.mac(id)
+          arpOut.srcMac := iface.mac
           arpOut.dstMac := ethIn.ethSrc
-          arpOut.srcIpv4 := io.config.ipv4(id)
+          arpOut.srcIpv4 := iface.ipv4
           arpOut.dstIpv4 := arpIn.srcIpv4
           arpOut.payload := 0.U
           // output reply
