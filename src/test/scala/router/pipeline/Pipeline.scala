@@ -13,7 +13,7 @@ import router._
 
 class RouterTester extends PipelineTester {
   "Router generate output" in {
-    test(new RouterPipeline()) { dut =>
+    test(new Router()) { dut =>
       initAndInput(dut, "src/test/resources/test_in.pcap")
         .fork {
           dumpOutput(dut, "src/test/resources/test_out.pcap")
@@ -45,18 +45,6 @@ class ArpPipelineTester extends PipelineTester {
         .fork {
           val output = loadAxisFromPcap("src/test/resources/arp_ans.pcap")
           dut.io.out.expectDequeueSeq(output)
-        }
-        .join()
-    }
-  }
-}
-
-class Ipv4PipelineTester extends PipelineTester {
-  "Ipv4Pipeline generate output" in {
-    test(new Ipv4Pipeline()) { dut =>
-      initAndInput(dut, "src/test/resources/test_in.pcap")
-        .fork {
-          dumpOutput(dut, "src/test/resources/ipv4_out.pcap")
         }
         .join()
     }

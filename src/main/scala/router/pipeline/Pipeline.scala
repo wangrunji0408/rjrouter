@@ -82,12 +82,16 @@ class PipelineBundle extends Bundle {
   val in = Flipped(Decoupled(new AXIStreamData(48 * 8)))
   val out = Decoupled(new AXIStreamData(48 * 8))
   val config = Input(new RouterConfig())
-  val arpQuery = new ArpQuery
-  val arpModify = new ArpModify
 }
 
-class Pipeline extends Module {
-  val io = IO(new PipelineBundle())
+class Pipeline(
+    hasArpQuery: Boolean = false,
+    hasArpModify: Boolean = false
+) extends Module {
+  val io = IO(new PipelineBundle {
+    val arpQuery = if (hasArpQuery) Some(new ArpQuery) else None
+    val arpModify = if (hasArpModify) Some(new ArpModify) else None
+  })
 
   val isFirstBeat = RegInit(true.B)
   when(io.in.fire) {
@@ -116,6 +120,10 @@ class Pipeline extends Module {
   io.in.ready := io.out.ready || drop
   io.out.valid := RegNext(out.valid && !drop)
   io.out.bits := RegNext(out.bits)
-  io.arpModify.setNone()
-  io.arpQuery.setNone()
+  if (hasArpModify) {
+    io.arpModify.get.setNone()
+  }
+  if (hasArpQuery) {
+    io.arpQuery.get.setNone()
+  }
 }

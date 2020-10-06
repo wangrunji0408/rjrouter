@@ -4,11 +4,13 @@ import chisel3._
 import chisel3.util._
 import router._
 
-class Ipv4Pipeline extends Pipeline {
+// Query ARP cache and set ethernet header.
+class Ipv4SetMac extends Pipeline(hasArpQuery = true) {
 
   when(io.in.valid && isFirstBeat) {
     val ethIn = io.in.bits.data.asTypeOf(new EtherHeader())
     val ipv4In = ethIn.payload.asTypeOf(new Ipv4Header())
+    val nextHop = ethIn.ethDst.asTypeOf(new NextHop())
     when(ethIn.ethType === EthType.IPV4) {
       // debug print
       // printf(p"$ipv4In checksum=${ipv4In.calcChecksum()}\n")
@@ -17,23 +19,17 @@ class Ipv4Pipeline extends Pipeline {
       //   printf(p"  $udpIn\n")
       // }
 
-      // default router
-      val outId = 3.U
-      val nextHop = Ipv4Addr("10.0.3.2")
-
-      io.arpQuery.ipv4 := nextHop
-      val dstMac = io.arpQuery.mac
+      io.arpQuery.get.ipv4 := nextHop.nextHop
+      val dstMac = io.arpQuery.get.mac
       when(dstMac.valid) {
-        val ipv4Out = WireInit(ipv4In)
+        // update ethernet header
         val ethOut = WireInit(ethIn)
-        ethOut.ethSrc := io.config.mac(outId)
+        ethOut.ethSrc := io.config.mac(nextHop.iface)
         ethOut.ethDst := dstMac.bits
-        ipv4Out.ttl := ipv4In.ttl - 1.U
-        ipv4Out.checksum := ipv4In.checksum + 0x0100.U
 
-        ethOut.payload := ipv4Out.asUInt
+        // output
         out.valid := true.B
-        out.bits.id := outId
+        out.bits.id := nextHop.iface
         out.bits.data := ethOut.asUInt
       }.otherwise {
         // TODO

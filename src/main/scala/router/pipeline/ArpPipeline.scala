@@ -6,7 +6,7 @@ import router._
 import router.table._
 
 // Process ARP packet
-class ArpPipeline extends Pipeline {
+class ArpPipeline extends Pipeline(hasArpModify = true) {
 
   when(io.in.valid && isFirstBeat) {
     val ethIn = io.in.bits.data.asTypeOf(new EtherHeader())
@@ -19,9 +19,9 @@ class ArpPipeline extends Pipeline {
         val id = io.in.bits.id
         val targetIsMe = arpIn.dstIpv4 === io.config.ipv4(id)
         // update ARP cache
-        io.arpModify.op := Mux(targetIsMe, ArpOp.Insert, ArpOp.Update)
-        io.arpModify.ipv4 := arpIn.srcIpv4
-        io.arpModify.mac := arpIn.srcMac
+        io.arpModify.get.op := Mux(targetIsMe, ArpOp.Insert, ArpOp.Update)
+        io.arpModify.get.ipv4 := arpIn.srcIpv4
+        io.arpModify.get.mac := arpIn.srcMac
 
         when(targetIsMe && arpIn.opcode === ArpOpcode.Request) {
           val ethOut = WireInit(ethIn)
