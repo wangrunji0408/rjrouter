@@ -78,7 +78,10 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
     }
     fork {
       val input = loadAxisFromPcap(filePath)
-      dut.io.in.enqueueSeq(input)
+      for (elt <- input) {
+        dut.io.in.enqueue(elt)
+        dut.clock.step(5)
+      }
     }
   }
 
@@ -86,8 +89,8 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
     val buf = ArrayBuffer[Byte]()
     val packets = ArrayBuffer[(Int, Array[Byte])]()
     var end = false
-    dut.io.out.ready.poke(true.B)
     while (!end) {
+      dut.io.out.ready.poke(true.B)
       fork
         .withRegion(Monitor) {
           // wait for valid
@@ -115,6 +118,8 @@ class PipelineTester extends FreeSpec with ChiselScalatestTester {
           }
         }
         .joinAndStep(dut.clock)
+      dut.io.out.ready.poke(false.B)
+      dut.clock.step(5)
     }
     storePackets(filePath, packets)
   }

@@ -118,8 +118,8 @@ class Pipeline(
 
   // default output
   io.in.ready := io.out.ready || drop
-  io.out.valid := RegNext(out.valid && !drop)
-  io.out.bits := RegNext(out.bits)
+  io.out.valid := RegEnable(out.valid && !drop, false.B, io.out.ready)
+  io.out.bits := RegEnable(out.bits, io.out.ready)
   if (hasArpModify) {
     io.arpModify.get.setNone()
   }

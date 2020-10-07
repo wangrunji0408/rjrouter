@@ -11,7 +11,9 @@ class Ipv4Check extends Pipeline {
     val ethIn = io.in.bits.data.asTypeOf(new EtherHeader())
     val ipv4In = ethIn.payload.asTypeOf(new Ipv4Header())
     when(ethIn.ethType === EthType.IPV4) {
-      when(!ipv4In.isValid || ipv4In.calcChecksum() =/= 0xFFFF.U) {
+      // FIXME: checksum causes timing error!
+      // when(!ipv4In.isValid || ipv4In.calcChecksum() =/= 0xFFFF.U) {
+      when(!ipv4In.isValid) {
         dropRest()
       }
       when(ipv4In.ttl <= 1.U) {
