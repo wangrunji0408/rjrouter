@@ -36,7 +36,7 @@ class Ipv4Forward extends Pipeline {
       // update IPv4 header
       val ipv4Out = WireInit(ipv4In)
       ipv4Out.ttl := ipv4In.ttl - 1.U
-      ipv4Out.checksum := ipv4In.checksum + 0x0100.U
+      ipv4Out.setChecksum(ipv4In.checksum +& 0x0100.U)
 
       // set nexthop at Eth.ethDst
       val ethDstOut = WireInit(ethIn.ethDst.asTypeOf(new NextHop))

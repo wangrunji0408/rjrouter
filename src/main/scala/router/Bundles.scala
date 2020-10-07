@@ -121,13 +121,22 @@ class Ipv4Header extends Bundle {
 
   val payload = Bits((14 * 8).W)
 
-  def calcChecksum() =
-    asTypeOf(Vec(17, UInt(16.W)))
+  def isValid =
+    version === 4.U &&
+      headerLen === 5.U
+
+  def calcChecksum() = {
+    val s1 = asTypeOf(Vec(17, UInt(16.W)))
       .slice(7, 17)
-      .fold(0.U(32.W))((a, b) => a + b)
-      .asTypeOf(Vec(2, UInt(16.W)))
+      .map(_.asTypeOf(UInt(32.W)))
       .reduce((a, b) => a + b)
-      .tail(16)
+    val s2 = s1.head(16) +& s1.tail(16)
+    s2.head(1) + s2.tail(1)
+  }
+
+  def setChecksum(x: UInt) {
+    checksum := x(x.getWidth - 1, 16) + x(15, 0)
+  }
 }
 
 object IpProtocol {
